@@ -1,0 +1,138 @@
+<script>
+(function () {
+  // --- Détection de la langue via <html lang="..."> ---
+  // Le script récupère la valeur de l'attribut lang et garde uniquement la partie avant un éventuel tiret (ex: "fr-CA" devient "fr").
+  var langAttr = document.documentElement.lang || 'fr';
+  var lang = langAttr.toLowerCase().split('-')[0]; // extrait le code langue principal
+
+  // --- Dictionnaire des traductions ---
+  // Les clés correspondent aux codes langue standard (ex: "fr", "en", "de") utilisés dans <html lang="...">.
+  // Pour ajouter une langue, copiez une entrée existante et adaptez les textes.
+  var translations = {
+    fr: {
+      vendors: [
+        {
+          name: "shopify_preferences",
+          title: "Préférences",
+          shortDescription:
+            "Cookies qui mémorisent vos préférences, comme le pays ou la langue, pour personnaliser vos visites sur notre site web"
+        },
+        {
+          name: "shopify_analytics",
+          title: "Analytique",
+          shortDescription:
+            "Cookies pour comprendre comment vous interagissez avec notre site"
+        },
+        {
+          name: "shopify_marketing",
+          title: "Marketing",
+          shortDescription:
+            "Cookies pour fournir des publicités et des communications marketing basées sur vos intérêts"
+        },
+        {
+          name: "shopify_sale_of_data",
+          title: "Vente de données",
+          shortDescription:
+            "Opter pour / contre le partage / vente de données"
+        }
+      ],
+      stepTitle: "Cookies Shopify",
+      stepSubTitle: "Shopify utilise plusieurs services, cela vous convient-il ?",
+      stepMessage:
+        "Shopify utilise plusieurs services et plugins, nous pouvons les contrôler via leur API de confidentialité"
+    },
+    en: {
+      vendors: [
+        {
+          name: "shopify_preferences",
+          title: "Preferences",
+          shortDescription:
+            "Cookies that remember your preferences, such as country or language, to personalize your visit to our website"
+        },
+        {
+          name: "shopify_analytics",
+          title: "Analytics",
+          shortDescription:
+            "Cookies to understand how you interact with our site"
+        },
+        {
+          name: "shopify_marketing",
+          title: "Marketing",
+          shortDescription:
+            "Cookies to provide advertising and marketing communications based on your interests"
+        },
+        {
+          name: "shopify_sale_of_data",
+          title: "Data Sale",
+          shortDescription:
+            "Opt in / out of data sharing / selling"
+        }
+      ],
+      stepTitle: "Shopify Cookies",
+      stepSubTitle: "Shopify uses several services, is that okay with you?",
+      stepMessage:
+        "Shopify uses several services and plugins. We can control them via their privacy API."
+    }
+    };
+
+  // Sélection de la langue, français par défaut si non trouvée
+  var t = translations[lang] || translations.fr;
+
+  // Construction du tableau vendors avec les URLs et domaines communs
+  window.vendors_shopify = [];
+  for (var i = 0; i < t.vendors.length; i++) {
+    var vendor = t.vendors[i];
+    window.vendors_shopify.push({
+      name: vendor.name,
+      title: vendor.title,
+      shortDescription: vendor.shortDescription,
+      policyUrl: "https://www.shopify.com/legal/terms",
+      domain: "shopify.com"
+    });
+  }
+
+  // Initialisation Axeptio
+  window._axcb = window._axcb || [];
+  window._axcb.push(function (sdk) {
+    sdk.on("ready", function () {
+      if (!sdk.cookiesConfig) return;
+
+      sdk.cookiesConfig.steps.splice(1, 0, {
+        hasVendors: true,
+        image: "cookie-bienvenue",
+        layout: "category",
+        message: t.stepMessage,
+        name: "welcome",
+        onlyOnce: true,
+        title: t.stepTitle,
+        subTitle: t.stepSubTitle,
+        vendors: window.vendors_shopify
+      });
+
+      if (window.Shopify && typeof window.Shopify.loadFeatures === "function") {
+        window.Shopify.loadFeatures([
+          {
+            name: "consent-tracking-api",
+            version: "0.1"
+          }
+        ]);
+      }
+    });
+
+    sdk.on("consent:saved", function (payload) {
+      var choices = payload.consent.preferences.vendors;
+      if (window.Shopify && window.Shopify.customerPrivacy) {
+        window.Shopify.customerPrivacy.setTrackingConsent(
+          {
+            preferences: choices.shopify_preferences,
+            analytics: choices.shopify_analytics,
+            marketing: choices.shopify_marketing,
+            sale_of_data: choices.shopify_sale_of_data
+          },
+          function () {}
+        );
+      }
+    });
+  });
+})();
+</script>
